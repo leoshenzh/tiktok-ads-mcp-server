@@ -167,6 +167,81 @@ class CreativeTools:
                 "message": f"Failed to upload image: {os.path.basename(image_path) if os.path.exists(image_path) else 'unknown'}"
             }
     
+    async def upload_video(
+        self,
+        video_path: str,
+        upload_type: str = "UPLOAD_BY_FILE",
+    ) -> Dict[str, Any]:
+        """Upload a video asset for ad creatives."""
+        try:
+            if not os.path.exists(video_path):
+                return {
+                    "success": False,
+                    "error": "File not found",
+                    "video_path": video_path,
+                    "message": f"Video file not found at path: {video_path}",
+                }
+
+            allowed_extensions = ['.mp4', '.mov', '.mpeg', '.avi', '.gif', '.3gp']
+            file_extension = os.path.splitext(video_path)[1].lower()
+            if file_extension not in allowed_extensions:
+                return {
+                    "success": False,
+                    "error": "Invalid file type",
+                    "video_path": video_path,
+                    "allowed_types": allowed_extensions,
+                    "message": (
+                        f"File type {file_extension} not supported. "
+                        f"Allowed: {', '.join(allowed_extensions)}"
+                    ),
+                }
+
+            file_size = os.path.getsize(video_path)
+            max_size = 500 * 1024 * 1024  # 500MB upper bound; TikTok enforces tighter limits
+            if file_size > max_size:
+                return {
+                    "success": False,
+                    "error": "File too large",
+                    "video_path": video_path,
+                    "file_size_mb": round(file_size / 1024 / 1024, 2),
+                    "max_size_mb": 500,
+                    "message": (
+                        f"File size ({round(file_size / 1024 / 1024, 2)}MB) "
+                        f"exceeds the safety cap of 500MB"
+                    ),
+                }
+
+            result = await self.client.upload_video(video_path, upload_type)
+            video_data = result.get("data", {}) if isinstance(result, dict) else {}
+            videos = video_data.get("videos") or []
+            primary = videos[0] if videos else {}
+
+            return {
+                "success": True,
+                "video_id": primary.get("video_id") or video_data.get("video_id"),
+                "preview_url": primary.get("preview_url"),
+                "duration": primary.get("duration"),
+                "width": primary.get("width"),
+                "height": primary.get("height"),
+                "size": primary.get("size") or file_size,
+                "format": primary.get("format") or file_extension.lstrip("."),
+                "file_path": video_path,
+                "file_size_mb": round(file_size / 1024 / 1024, 2),
+                "raw_response": result,
+                "message": f"Successfully uploaded video: {os.path.basename(video_path)}",
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "video_path": video_path,
+                "message": (
+                    f"Failed to upload video: "
+                    f"{os.path.basename(video_path) if os.path.exists(video_path) else 'unknown'}"
+                ),
+            }
+
     async def create_ad_creative(
         self,
         creative_name: str,
@@ -228,16 +303,21 @@ class CreativeTools:
             
             if display_name:
                 creative_data["display_name"] = display_name
-            
-            # Note: This is a placeholder - actual implementation would call TikTok's creative creation API
-            # The TikTok Ads API has specific endpoints for creating different types of creatives
-            
-            # For now, return a mock successful response
-            creative_id = f"creative_{int(__import__('time').time())}"
-            
+
+            # Fadior fork: route to the real TikTok ad/create/ endpoint. TikTok
+            # creates creatives as part of an ad object, so we POST through the
+            # client's create_ad helper. The caller can pass an `adgroup_id`
+            # via the `creative_data` extension (handled below) or attach it
+            # later via update_adgroup.
+            api_result = await self.client.create_ad(creative_data)
+            api_data = api_result.get("data", {}) if isinstance(api_result, dict) else {}
+            ad_ids = api_data.get("ad_ids") or []
+            creative_id = api_data.get("creative_id") or (ad_ids[0] if ad_ids else None)
+
             return {
                 "success": True,
                 "creative_id": creative_id,
+                "ad_ids": ad_ids,
                 "creative_name": creative_name,
                 "creative_type": creative_type,
                 "ad_text": ad_text,
@@ -247,6 +327,7 @@ class CreativeTools:
                     "image_id": image_id,
                     "video_id": video_id,
                 },
+                "raw_response": api_result,
                 "message": f"Successfully created {creative_type} creative: {creative_name}"
             }
             

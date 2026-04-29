@@ -505,7 +505,210 @@ secondary_goal_result_rate	string	Deep funnel result rate	Percentage of deep fun
             }
         )
     ])
-    
+
+    # ------------------------------------------------------------------
+    # Fadior fork — write tools (campaigns / adgroups / ads / creatives /
+    # audiences / reports). Pre-existing client methods plus 6 new ones.
+    # ------------------------------------------------------------------
+    tools.extend([
+        Tool(
+            name="tiktok_ads_create_campaign",
+            description="Create a new campaign on the current advertiser account",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Campaign name"},
+                    "objective": {
+                        "type": "string",
+                        "description": "Campaign objective (e.g. REACH, TRAFFIC, APP_INSTALL, LEAD_GENERATION)"
+                    },
+                    "budget": {
+                        "type": "number",
+                        "description": "Daily budget in advertiser currency"
+                    },
+                    "special_industries": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional special-industry tags"
+                    }
+                },
+                "required": ["name", "objective", "budget"]
+            }
+        ),
+        Tool(
+            name="tiktok_ads_update_campaign",
+            description="Update an existing campaign (name / budget / industries / arbitrary extras)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "campaign_id": {"type": "string"},
+                    "name": {"type": "string"},
+                    "budget": {"type": "number"},
+                    "special_industries": {
+                        "type": "array", "items": {"type": "string"}
+                    },
+                    "extra": {
+                        "type": "object",
+                        "description": "Additional campaign/update payload fields per TikTok API spec"
+                    }
+                },
+                "required": ["campaign_id"]
+            }
+        ),
+        Tool(
+            name="tiktok_ads_pause_campaign",
+            description="Pause (DISABLE) a single campaign",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "campaign_id": {"type": "string"}
+                },
+                "required": ["campaign_id"]
+            }
+        ),
+        Tool(
+            name="tiktok_ads_create_adgroup",
+            description="Create a new ad group inside an existing campaign",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "campaign_id": {"type": "string"},
+                    "name": {"type": "string"},
+                    "placement_type": {
+                        "type": "string",
+                        "description": "Placement type (e.g. PLACEMENT_TYPE_AUTOMATIC, PLACEMENT_TYPE_NORMAL)"
+                    },
+                    "budget": {"type": "number"},
+                    "bid_type": {
+                        "type": "string",
+                        "default": "BID_TYPE_NO_BID"
+                    }
+                },
+                "required": ["campaign_id", "name", "placement_type", "budget"]
+            }
+        ),
+        Tool(
+            name="tiktok_ads_update_adgroup",
+            description="Update an existing ad group",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "adgroup_id": {"type": "string"},
+                    "name": {"type": "string"},
+                    "budget": {"type": "number"},
+                    "bid_type": {"type": "string"},
+                    "extra": {
+                        "type": "object",
+                        "description": "Additional adgroup/update payload fields per TikTok API spec"
+                    }
+                },
+                "required": ["adgroup_id"]
+            }
+        ),
+        Tool(
+            name="tiktok_ads_update_status",
+            description="Enable / disable / delete campaigns, adgroups, or ads in bulk",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "level": {
+                        "type": "string",
+                        "enum": ["campaign", "adgroup", "ad"]
+                    },
+                    "ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of entity IDs at the chosen level"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["ENABLE", "DISABLE", "DELETE"]
+                    }
+                },
+                "required": ["level", "ids", "status"]
+            }
+        ),
+        Tool(
+            name="tiktok_ads_create_ad",
+            description="Create a new ad inside an existing ad group",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "adgroup_id": {"type": "string"},
+                    "ad_data": {
+                        "type": "object",
+                        "description": "Full ad payload per TikTok ad/create/ spec (creatives, ad_name, etc.)"
+                    }
+                },
+                "required": ["adgroup_id", "ad_data"]
+            }
+        ),
+        Tool(
+            name="tiktok_ads_upload_image",
+            description="Upload an image asset for ad creatives",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "image_path": {"type": "string", "description": "Local image file path"},
+                    "upload_type": {
+                        "type": "string",
+                        "default": "UPLOAD_BY_FILE"
+                    }
+                },
+                "required": ["image_path"]
+            }
+        ),
+        Tool(
+            name="tiktok_ads_upload_video",
+            description="Upload a video asset for ad creatives",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "video_path": {"type": "string", "description": "Local video file path"},
+                    "upload_type": {
+                        "type": "string",
+                        "default": "UPLOAD_BY_FILE"
+                    }
+                },
+                "required": ["video_path"]
+            }
+        ),
+        Tool(
+            name="tiktok_ads_generate_report",
+            description="Create an asynchronous custom performance report",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "report_type": {
+                        "type": "string",
+                        "description": "Report type (BASIC, AUDIENCE, PLACEMENT, DPA)"
+                    },
+                    "dimensions": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "metrics": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "date_range": {
+                        "type": "object",
+                        "properties": {
+                            "start_date": {"type": "string"},
+                            "end_date": {"type": "string"}
+                        },
+                        "required": ["start_date", "end_date"]
+                    },
+                    "filtering": {
+                        "type": "object",
+                        "description": "Optional filtering payload per TikTok report spec"
+                    }
+                },
+                "required": ["report_type", "dimensions", "metrics", "date_range"]
+            }
+        )
+    ])
+
     return tools
 
 
@@ -546,29 +749,41 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             result = await tiktok_server.campaign_tools.get_campaign_details(**arguments)
         elif name == "tiktok_ads_create_campaign":
             result = await tiktok_server.campaign_tools.create_campaign(**arguments)
+        elif name == "tiktok_ads_update_campaign":
+            result = await tiktok_server.campaign_tools.update_campaign(**arguments)
+        elif name == "tiktok_ads_pause_campaign":
+            result = await tiktok_server.campaign_tools.pause_campaign(**arguments)
         elif name == "tiktok_ads_get_adgroups":
             result = await tiktok_server.campaign_tools.get_adgroups(**arguments)
         elif name == "tiktok_ads_create_adgroup":
             result = await tiktok_server.campaign_tools.create_adgroup(**arguments)
-            
+        elif name == "tiktok_ads_update_adgroup":
+            result = await tiktok_server.campaign_tools.update_adgroup(**arguments)
+        elif name == "tiktok_ads_update_status":
+            result = await tiktok_server.campaign_tools.update_status(**arguments)
+        elif name == "tiktok_ads_create_ad":
+            result = await tiktok_server.campaign_tools.create_ad(**arguments)
+
         # Performance tools
         elif name == "tiktok_ads_get_campaign_performance":
             result = await tiktok_server.performance_tools.get_campaign_performance(**arguments)
         elif name == "tiktok_ads_get_adgroup_performance":
             result = await tiktok_server.performance_tools.get_adgroup_performance(**arguments)
-            
+
         # Creative tools
         elif name == "tiktok_ads_get_ad_creatives":
             result = await tiktok_server.creative_tools.get_ad_creatives(**arguments)
         elif name == "tiktok_ads_upload_image":
             result = await tiktok_server.creative_tools.upload_image(**arguments)
-            
+        elif name == "tiktok_ads_upload_video":
+            result = await tiktok_server.creative_tools.upload_video(**arguments)
+
         # Audience tools
         elif name == "tiktok_ads_get_custom_audiences":
             result = await tiktok_server.audience_tools.get_custom_audiences(**arguments)
         elif name == "tiktok_ads_get_targeting_options":
             result = await tiktok_server.audience_tools.get_targeting_options(**arguments)
-            
+
         # Reporting tools
         elif name == "tiktok_ads_generate_report":
             result = await tiktok_server.reporting_tools.generate_report(**arguments)

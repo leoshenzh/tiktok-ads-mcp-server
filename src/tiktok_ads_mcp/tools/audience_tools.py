@@ -229,10 +229,12 @@ class AudienceTools:
                     "app_id": data_source.get("app_id"),
                     "app_activity_rules": data_source.get("rules", []),
                 })
-            
-            # Note: This is a placeholder - actual implementation would call TikTok's audience creation API
-            audience_id = f"audience_{int(__import__('time').time())}"
-            
+
+            # Fadior fork: route to the real TikTok DMP custom-audience endpoint.
+            api_result = await self.client.create_custom_audience(audience_data)
+            api_data = api_result.get("data", {}) if isinstance(api_result, dict) else {}
+            audience_id = api_data.get("custom_audience_id") or api_data.get("audience_id")
+
             return {
                 "success": True,
                 "audience_id": audience_id,
@@ -240,7 +242,7 @@ class AudienceTools:
                 "audience_type": audience_type,
                 "retention_days": retention_days,
                 "data_source": data_source,
-                "estimated_size": "Processing...",
+                "raw_response": api_result,
                 "status": "CREATING",
                 "message": f"Successfully initiated creation of custom audience: {audience_name}"
             }

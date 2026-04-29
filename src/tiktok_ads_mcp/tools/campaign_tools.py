@@ -239,6 +239,107 @@ class CampaignTools:
                 "message": "Failed to retrieve ad groups"
             }
     
+    # ------------------------------------------------------------------
+    # Fadior fork — write helpers
+    # ------------------------------------------------------------------
+    async def update_campaign(
+        self,
+        campaign_id: str,
+        name: Optional[str] = None,
+        budget: Optional[float] = None,
+        special_industries: Optional[List[str]] = None,
+        extra: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Update an existing campaign (name / budget / special_industries / arbitrary extras)."""
+        try:
+            data: Dict[str, Any] = {"campaign_id": campaign_id}
+            if name is not None:
+                data["campaign_name"] = name
+            if budget is not None:
+                data["budget"] = budget
+            if special_industries is not None:
+                data["special_industries"] = special_industries
+            if extra:
+                data.update(extra)
+            result = await self.client.update_campaign(data)
+            return {"success": True, "campaign_id": campaign_id, "response": result,
+                    "message": f"Updated campaign {campaign_id}"}
+        except Exception as e:
+            return {"success": False, "error": str(e), "campaign_id": campaign_id,
+                    "message": f"Failed to update campaign {campaign_id}"}
+
+    async def update_adgroup(
+        self,
+        adgroup_id: str,
+        name: Optional[str] = None,
+        budget: Optional[float] = None,
+        bid_type: Optional[str] = None,
+        extra: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Update an existing ad group."""
+        try:
+            data: Dict[str, Any] = {"adgroup_id": adgroup_id}
+            if name is not None:
+                data["adgroup_name"] = name
+            if budget is not None:
+                data["budget"] = budget
+            if bid_type is not None:
+                data["bid_type"] = bid_type
+            if extra:
+                data.update(extra)
+            result = await self.client.update_adgroup(data)
+            return {"success": True, "adgroup_id": adgroup_id, "response": result,
+                    "message": f"Updated ad group {adgroup_id}"}
+        except Exception as e:
+            return {"success": False, "error": str(e), "adgroup_id": adgroup_id,
+                    "message": f"Failed to update ad group {adgroup_id}"}
+
+    async def update_status(
+        self,
+        level: str,
+        ids: List[str],
+        status: str,
+    ) -> Dict[str, Any]:
+        """Enable / disable / delete campaigns, adgroups, or ads."""
+        try:
+            result = await self.client.update_status(level=level, ids=ids, status=status)
+            return {"success": True, "level": level, "ids": ids, "status": status,
+                    "response": result,
+                    "message": f"Set {len(ids)} {level}(s) to {status}"}
+        except Exception as e:
+            return {"success": False, "error": str(e), "level": level, "ids": ids,
+                    "status": status,
+                    "message": f"Failed to update status for {len(ids)} {level}(s)"}
+
+    async def pause_campaign(self, campaign_id: str) -> Dict[str, Any]:
+        """Pause a single campaign (DISABLE)."""
+        try:
+            result = await self.client.pause_campaign(campaign_id)
+            return {"success": True, "campaign_id": campaign_id, "response": result,
+                    "message": f"Paused campaign {campaign_id}"}
+        except Exception as e:
+            return {"success": False, "error": str(e), "campaign_id": campaign_id,
+                    "message": f"Failed to pause campaign {campaign_id}"}
+
+    async def create_ad(
+        self,
+        adgroup_id: str,
+        ad_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Create a new ad inside an ad group.
+
+        ``ad_data`` must follow the TikTok ad/create/ schema (e.g. creatives list,
+        ad_name, etc.). The caller is responsible for assembling the correct payload.
+        """
+        try:
+            payload = {"adgroup_id": adgroup_id, **ad_data}
+            result = await self.client.create_ad(payload)
+            return {"success": True, "adgroup_id": adgroup_id, "response": result,
+                    "message": f"Created ad in ad group {adgroup_id}"}
+        except Exception as e:
+            return {"success": False, "error": str(e), "adgroup_id": adgroup_id,
+                    "message": f"Failed to create ad in ad group {adgroup_id}"}
+
     async def create_adgroup(
         self,
         campaign_id: str,

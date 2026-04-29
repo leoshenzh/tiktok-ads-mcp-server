@@ -316,7 +316,73 @@ class TikTokAdsClient:
         """Download a completed report."""
         params = {"task_id": task_id}
         return await self._make_request("GET", "report/task/download/", params=params)
-    
+
+    # ------------------------------------------------------------------
+    # Fadior fork — additional write endpoints
+    # ------------------------------------------------------------------
+    async def update_campaign(self, campaign_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update an existing campaign."""
+        return await self._make_request("POST", "campaign/update/", data=campaign_data)
+
+    async def update_adgroup(self, adgroup_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update an existing ad group."""
+        return await self._make_request("POST", "adgroup/update/", data=adgroup_data)
+
+    async def update_status(
+        self,
+        level: str,
+        ids: List[str],
+        status: str,
+    ) -> Dict[str, Any]:
+        """Update campaign / adgroup / ad status (enable / disable / delete).
+
+        Args:
+            level: One of ``'campaign'``, ``'adgroup'``, ``'ad'``.
+            ids: List of entity IDs at that level.
+            status: Operation status, e.g. ``'ENABLE'``, ``'DISABLE'``, ``'DELETE'``.
+        """
+        endpoint = f"{level}/status/update/"
+        data = {
+            "advertiser_id": self.advertiser_id,
+            f"{level}_ids": ids,
+            "operation_status": status,
+        }
+        return await self._make_request("POST", endpoint, data=data)
+
+    async def create_ad(self, ad_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new ad under an ad group."""
+        return await self._make_request("POST", "ad/create/", data=ad_data)
+
+    async def upload_video(
+        self,
+        video_path: str,
+        upload_type: str = "UPLOAD_BY_FILE",
+    ) -> Dict[str, Any]:
+        """Upload a video creative file.
+
+        Mirrors the ``upload_image`` multipart flow but POSTs to
+        ``file/video/ad/upload/``.
+        """
+        with open(video_path, "rb") as f:
+            files = {"video_file": f}
+            data = {"upload_type": upload_type}
+            return await self._make_request(
+                "POST", "file/video/ad/upload/", data=data, files=files
+            )
+
+    async def pause_campaign(self, campaign_id: str) -> Dict[str, Any]:
+        """Convenience helper: pause a single campaign."""
+        return await self.update_status("campaign", [campaign_id], "DISABLE")
+
+    async def create_custom_audience(
+        self,
+        audience_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Create a custom audience (DMP)."""
+        return await self._make_request(
+            "POST", "dmp/custom_audience/create/", data=audience_data
+        )
+
     async def close(self):
         """Close the HTTP client."""
         await self.client.aclose()

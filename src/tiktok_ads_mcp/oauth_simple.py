@@ -22,17 +22,30 @@ class SimpleTikTokOAuth:
     AUTHORIZATION_URL = "https://business-api.tiktok.com/portal/auth"
     TOKEN_URL = "https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/"
     
-    def __init__(self, app_id: str, app_secret: str, redirect_uri: str = "https://adsmcp.com"):
+    def __init__(
+        self,
+        app_id: str,
+        app_secret: str,
+        redirect_uri: Optional[str] = None,
+    ):
         """Initialize OAuth client.
-        
+
         Args:
             app_id: TikTok app ID
             app_secret: TikTok app secret
-            redirect_uri: OAuth redirect URI configured in your TikTok app
+            redirect_uri: OAuth redirect URI configured in your TikTok app.
+                Resolution order:
+                  1. explicit redirect_uri argument
+                  2. ``TIKTOK_OAUTH_REDIRECT_URI`` environment variable
+                  3. ``"https://www.fadiorhome.com/"`` (Fadior fork default)
         """
         self.app_id = app_id
         self.app_secret = app_secret
-        self.redirect_uri = redirect_uri
+        self.redirect_uri = (
+            redirect_uri
+            or os.getenv("TIKTOK_OAUTH_REDIRECT_URI")
+            or "https://www.fadiorhome.com/"
+        )
         
     def _generate_code_verifier(self) -> str:
         """Generate PKCE code verifier."""
